@@ -18,132 +18,123 @@ class TetrisLogic(val randomGen: RandomGenerator,
   def this() =
     this(new ScalaRandomGen(), DefaultDims, makeEmptyBoard(DefaultDims))
 
-  var anchor =
-    if (gridDims.width % 2 == 0) Point(gridDims.width / 2 - 1, 1) else Point(gridDims.width / 2, 1)
 
-  private def initBody(anch: Point, index: Int): List[Point] = {
+   val initAnchor =  if (gridDims.width % 2 == 0) Point(gridDims.width / 2 - 1, 1) else Point(gridDims.width / 2, 1)
+
+  private def spawnNewTetromino(index: Int): Tetromino = {
     index match {
-      case 0 => List(Point(anch.x - 1, anch.y), anch, Point(anch.x + 1, anch.y), Point(anch.x + 2, anch.y))
-      case 1 => List(Point(anch.x - 1, anch.y - 1), Point(anch.x - 1, anch.y), anch, Point(anch.x + 1, anch.y))
-      case 2 => List(Point(anch.x + 1, anch.y - 1), Point(anch.x - 1, anch.y), anch, Point(anch.x + 1, anch.y))
-      case 3 => List(Point(anch.x, anch.y - 1), anch, Point(anch.x + 1, anch.y), Point(anch.x + 1, anch.y - 1))
-      case 4 => List(Point(anch.x, anch.y - 1), Point(anch.x + 1, anch.y - 1), Point(anch.x - 1, anch.y), anch)
-      case 5 => List(Point(anch.x, anch.y - 1), Point(anch.x - 1, anch.y), anch, Point(anch.x + 1, anch.y))
-      case 6 => List(Point(anch.x - 1, anch.y - 1), Point(anch.x, anch.y - 1), anch, Point(anch.x + 1, anch.y))
+      case 0 => IBlock(anchor = initAnchor)
+      case 1 => CenteredAnchor.JTetromino(anchor = initAnchor)
+      case 2 => CenteredAnchor.LTetromino(anchor = initAnchor)
+      case 3 => OBlock(anchor = initAnchor)
+      case 4 => CenteredAnchor.STetromino(anchor = initAnchor)
+      case 5 => CenteredAnchor.TTetromino(anchor = initAnchor)
+      case 6 => CenteredAnchor.ZTetromino(anchor = initAnchor)
     }
   }
 
-  private def spawnNewTetromino(index: Int, body: List[Point]): Tetromino = {
-    index match {
-      case 0 => IBlock(body)
-      case 1 => CenteredAnchor.JTetromino(body)
-      case 2 => CenteredAnchor.LTetromino(body)
-      case 3 => OBlock(body)
-      case 4 => CenteredAnchor.STetromino(body)
-      case 5 => CenteredAnchor.TTetromino(body)
-      case 6 => CenteredAnchor.ZTetromino(body)
-    }
-  }
+ /// private def handleInitialBoard()
+  val oldTetrominos : List[Point] = initialBoard.zipWithIndex.map {
+    case (row, rowIndex) =>
+      row.zipWithIndex.collect {
+        case (celltype, columnIndex) if celltype != Empty => Point(columnIndex, rowIndex)
+      }.toList
+  }.toList.flatten
+
+  println("OLD TETROMnios : " + oldTetrominos)
 
   val newRandomIndex = randomGen.randomInt(7)
-  var currGamestate = Gamestate(anchor, spawnNewTetromino(newRandomIndex, initBody(anchor, newRandomIndex)), initialBoard, newRandomIndex)
+  var currGamestate = Gamestate(initAnchor, spawnNewTetromino(newRandomIndex), initialBoard, newRandomIndex)
+  currGamestate = currGamestate.copy(currTetromino = currGamestate.currTetromino.getMovedBody(initAnchor), oldTetrominos = oldTetrominos)
 
   private def setTetrominoLock(tetromino: Tetromino): Tetromino = {
     tetromino.setLock(true)
   }
 
-  private def moveAnchor(currAnchor: Point, direction: MoveDirection): Point = {
-    direction match {
-      case Down() => Point(currAnchor.x, currAnchor.y + 1)
-      case Left() => Point(currAnchor.x - 1, currAnchor.y)
-      case Right() => Point(currAnchor.x + 1, currAnchor.y)
+  private def addTetrominoToGameMap(tetromino : Tetromino) : Gamestate =
+    {
+      
     }
-  }
+  private def isCollided(body : List[Point], direction: MoveDirection): Boolean = {
+    val oldTetrominosBody = currGamestate.oldTetrominos//.flatMap(_.body)
 
-  private def isAboutToCollide(tetromino: Tetromino, direction: MoveDirection): Boolean = {
-    val oldTetrominosBody = currGamestate.oldTetrominos.flatMap(_.body)
-    tetromino.move(direction).intersect(oldTetrominosBody).nonEmpty
-  }
-
-  private def willCollideWhenRotated(tetromino: Tetromino, direction: RotateDirection, anchor: Point): Boolean = {
-    val oldTetrominosBody = currGamestate.oldTetrominos.flatMap(_.body)
-    direction match {
-      case RightRotate() => tetromino.rotateRight(anchor).intersect(oldTetrominosBody).nonEmpty
-      case LeftRotate() => tetromino.rotateLeft(anchor).intersect(oldTetrominosBody).nonEmpty
+    val movedBody = direction match {
+      case Left() => body.map(point => Point(point.x-1, point.y))
+      case Right() => body.map(point => Point(point.x+1, point.y))
+      case Down() => body.map(point => Point(point.x, point.y+1))
     }
+    movedBody.intersect(oldTetrominosBody).nonEmpty
   }
 
   private def isOutOfBounds(body : List[Point], direction : MoveDirection): Boolean = {
     direction match {
       case Left() => body.exists(_.x <= 0)
       case Right() => body.exists(_.x >= gridDims.width - 1)
-      case Down() => body.exists(_.y >= gridDims.height -1)
+      case Down() => body.exists(_.y >= gridDims.height - 1)
+    }
+    }
+
+  private def boundsCheck(p : Point) : Boolean =
+    {
+      (p.x >= gridDims.width) ||
+       (p.x < 0) ||
+        (p.y >= gridDims.height)
+    }
+  private def isOutOfBoundsAfterRotation(tetromino : Tetromino, direction: RotateDirection): Boolean = {
+    val leftRotatedTetromino = tetromino.rotateLeft()
+    val rightRotatedTetromino = tetromino.rotateRight()
+    direction match {
+      case LeftRotate() => leftRotatedTetromino.body.exists(point => boundsCheck(point))
+      case RightRotate() => rightRotatedTetromino.body.exists(point => boundsCheck(point))
+
     }
   }
-  private def isOutOufBoundsAfterRotation(tetromino: Tetromino, direction : RotateDirection, anchor: Point) : Boolean = {
-    val newBody = direction match {
-      case LeftRotate() => tetromino.rotateLeft(anchor)
-      case RightRotate() => tetromino.rotateRight(anchor)
-    }
-    newBody.exists(_.x < 0) ||
-      newBody.exists(_.x >= gridDims.width) ||
-      newBody.exists(_.y >= gridDims.height)
-    }
 
+  private def isCollidedAfterRotation(tetromino : Tetromino, direction : RotateDirection) : Boolean =
+    {
+      val oldTetrominosBody = currGamestate.oldTetrominos//.flatMap(_.body)
+      val leftRotatedTetromino = tetromino.rotateLeft()
+      val rightRotatedTetromino = tetromino.rotateRight()
+      direction match {
+        case LeftRotate() => leftRotatedTetromino.body.intersect(oldTetrominosBody).nonEmpty
+        case RightRotate() => rightRotatedTetromino.body.intersect(oldTetrominosBody).nonEmpty
 
+      }
+    }
+  private def canRotateInDirection(tetromino : Tetromino, d : RotateDirection) : Boolean =
+    {
+      !isOutOfBoundsAfterRotation(tetromino, d) &&
+        !isCollidedAfterRotation(tetromino, d)
+    }
   private def canMoveInDirection(tetromino : Tetromino, d : MoveDirection) : Boolean =
     {
-      !isAboutToCollide(tetromino, d) &&
-        !isAboutToMoveOuttaBounds(tetromino, d)
-    }
-  private def canRotateInDirection(tetromino : Tetromino, d : RotateDirection, anchor : Point) : Boolean =
-    {
-      !willCollideWhenRotated(tetromino, d, anchor) &&
-        !isOutOufBoundsAfterRotation(tetromino, d, anchor)
-    }
-  private def isAboutToMoveOuttaBounds(tetromino : Tetromino, direction : MoveDirection) : Boolean =
-    {
-      direction match {
-        case Left() =>  tetromino.body.exists(_.x <= 0)
-        case Right() => tetromino.body.exists(_.x >= gridDims.width - 1)
-        case Down() => tetromino.body.exists(_.y >= gridDims.height - 1)
-      }
+      !isCollided(tetromino.body, d) &&
+        !isOutOfBounds(tetromino.body, d)
     }
   private def handleLandedTetromino(tetromino: Tetromino) : Gamestate =
     {
 
-      if(isAboutToCollide(tetromino, Down()) || isAboutToMoveOuttaBounds(tetromino, Down()))
+      if(isCollided(tetromino.body, Down()) || isOutOfBounds(tetromino.body, Down()))
       {
         val newLockedTetromino = setTetrominoLock(tetromino)
-        val appendedLockedTetrominos = currGamestate.oldTetrominos :+ newLockedTetromino
-        currGamestate.copy(oldTetrominos = appendedLockedTetrominos, currTetromino = newLockedTetromino)
+        val newRandomIndex = randomGen.randomInt(7)
+        currGamestate.copy(currTetAnchor = initAnchor,
+                           currTetromino = newLockedTetromino,
+                            currTetIndex = newRandomIndex)
       }
       else currGamestate
     }
   // TODO implement me
   def rotateLeft(): Unit =
     {
-      val newTetrominoBody = currGamestate.currTetromino.rotateLeft(currGamestate.currTetAnchor)
-      val currIndex = currGamestate.currTetIndex
-      val currAnchor = currGamestate.currTetAnchor
-      val currTetromino = currGamestate.currTetromino
-      if(canRotateInDirection(currTetromino, LeftRotate(), currAnchor)) {
-        currGamestate = currGamestate.copy(currTetromino = spawnNewTetromino(currIndex, newTetrominoBody))
-      }
-      println(currGamestate.currTetromino)
+      if (canRotateInDirection(currGamestate.currTetromino, LeftRotate())) currGamestate = currGamestate.copy(currTetromino = currGamestate.currTetromino.rotateLeft())
     }
 
   // TODO implement me
   def rotateRight(): Unit =
     {
-      val newTetrominoBody = currGamestate.currTetromino.rotateRight(currGamestate.currTetAnchor)
-      val currIndex = currGamestate.currTetIndex
-      val currAnchor = currGamestate.currTetAnchor
-      val currTetromino = currGamestate.currTetromino
-      if(canRotateInDirection(currTetromino, RightRotate(), currAnchor)) {
-        currGamestate = currGamestate.copy(currTetromino = spawnNewTetromino(currIndex, newTetrominoBody))
-      }
-        }
+      if (canRotateInDirection(currGamestate.currTetromino, RightRotate())) currGamestate = currGamestate.copy(currTetromino = currGamestate.currTetromino.rotateRight())
+    }
 
   // TODO implement me
   def moveLeft(): Unit =
@@ -151,13 +142,20 @@ class TetrisLogic(val randomGen: RandomGenerator,
       val currAnchor = currGamestate.currTetAnchor
       val currIndex = currGamestate.currTetIndex
       val currTetromino = currGamestate.currTetromino
+      val isTetrominoLocked = currGamestate.currTetromino.isLocked
 
       if(canMoveInDirection(currTetromino, Left())) {
-        val newAnchor = moveAnchor(currAnchor, Left())
-        val newBody = currTetromino.move(Left())
-        currGamestate = currGamestate.copy(currTetromino = spawnNewTetromino(currIndex, newBody), currTetAnchor = newAnchor)
-        currGamestate = handleLandedTetromino(currGamestate.currTetromino)
-      }
+        val newAnchor = currTetromino.moveAnchor(Left())
+        currGamestate = currGamestate.copy(currTetromino = currTetromino.getMovedBody(newAnchor))
+        if(isTetrominoLocked) currGamestate = currGamestate.copy(currTetromino = setTetrominoLock(currTetromino))
+          }
+    }
+
+  private def appendOldTetrominos(tetromino : Tetromino) : Gamestate =
+    {
+      val appendedOldTetrominos = tetromino.body.map(point => Point(point.x, point.y)) ++ currGamestate.oldTetrominos
+      println("NEW TETROMINOS: " + appendedOldTetrominos)
+      currGamestate.copy(oldTetrominos = appendedOldTetrominos)
     }
 
   // TODO implement me
@@ -165,34 +163,37 @@ class TetrisLogic(val randomGen: RandomGenerator,
     val currAnchor = currGamestate.currTetAnchor
     val currIndex = currGamestate.currTetIndex
     val currTetromino = currGamestate.currTetromino
+    val isTetrominoLocked = currGamestate.currTetromino.isLocked
 
     if (canMoveInDirection(currTetromino, Right())) {
-      val newAnchor = moveAnchor(currAnchor, Right())
-      val newBody = currTetromino.move(Right())
-      currGamestate = currGamestate.copy(currTetromino = spawnNewTetromino(currIndex,newBody), currTetAnchor = newAnchor)
-      currGamestate = handleLandedTetromino(currGamestate.currTetromino)
+      val newAnchor = currTetromino.moveAnchor(Right())
+      currGamestate = currGamestate.copy(currTetromino = currTetromino.getMovedBody(newAnchor))
+      if(isTetrominoLocked) currGamestate = currGamestate.copy(currTetromino = setTetrominoLock(currTetromino))
+      //currGamestate = handleLandedTetromino(currGamestate.currTetromino)
     }
   }
 
   // TODO implement me
   def moveDown(): Unit =
   {
-    val currAnchor = currGamestate.currTetAnchor
     val currTetromino = currGamestate.currTetromino
+
+    if(currGamestate.currTetromino.isLocked)
+      {
+        currGamestate = appendOldTetrominos(currTetromino)
+        val newRandomIndex = randomGen.randomInt(7)
+        currGamestate = currGamestate.copy(currTetAnchor = initAnchor,
+          currTetromino = spawnNewTetromino(newRandomIndex),
+          currTetIndex = newRandomIndex)
+
+      }
+    currGamestate = handleLandedTetromino(currGamestate.currTetromino)
+    val currAnchor = currGamestate.currTetAnchor
     val currIndex = currGamestate.currTetIndex
 
-    if(!currTetromino.isLocked && canMoveInDirection(currTetromino, Down())) {
-      val newAnchor = moveAnchor(currAnchor,Down())
-      val newBody = currTetromino.move(Down())
-      currGamestate = currGamestate.copy(currTetromino = spawnNewTetromino(currIndex, newBody), currTetAnchor = newAnchor)
-      currGamestate = handleLandedTetromino(currGamestate.currTetromino)
-      println(currGamestate.currTetAnchor)
-    }
-    else
-    {
-      val newAnchor = Point(gridDims.width/2, 1)
-      val newRandomIndex = randomGen.randomInt(7)
-      currGamestate = currGamestate.copy(currTetAnchor = anchor,currTetromino = spawnNewTetromino(newRandomIndex, initBody(anchor,newRandomIndex)),currTetIndex = newRandomIndex)
+    if(!currGamestate.currTetromino.isLocked && canMoveInDirection(currTetromino, Down())) {
+      val newAnchor = currTetromino.moveAnchor(Down())
+      currGamestate = currGamestate.copy(currTetromino = currTetromino.getMovedBody(newAnchor))
     }
   }
 
@@ -202,7 +203,7 @@ class TetrisLogic(val randomGen: RandomGenerator,
   // TODO implement me
   def isGameOver: Boolean =
     {
-      val oldTetrominosBody = currGamestate.oldTetrominos.flatMap(_.body)
+      val oldTetrominosBody = currGamestate.oldTetrominos//.flatMap(_.body)
       oldTetrominosBody.exists(_.y <= 0)
     }
 
@@ -212,14 +213,13 @@ class TetrisLogic(val randomGen: RandomGenerator,
     {
       currGamestate.currTetromino.celltype
     }
-    else if(currGamestate.oldTetrominos.map(_.body).flatten.contains(p))
+    else if(currGamestate.oldTetrominos.contains(p))///.map(_.body).flatten.contains(p))
       {
-        val tetromino = currGamestate.oldTetrominos.find(_.body.contains(p))
-
-        tetromino match{
-          case Some(foundTetromino) => foundTetromino.celltype
+        OCell
         }
-      }
+
+        ///tetromino match{
+          //case Some(foundTetromino) => foundTetromino.celltype
     else Empty
   }
 }
