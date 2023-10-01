@@ -48,16 +48,6 @@ case class CenteredAnchor(override val body : List[Point],
     {
       CenteredAnchor(relativeBody.map(point => Point(point.x + anchor.x, point.y + anchor.y)),anchor, relativeBody, celltype)
     }
-
-  /*override def move(direction : MoveDirection) : CenteredAnchor =
-  {
-    direction match {
-      case Down() => CenteredAnchor(body.map(point => Point(point.x, point.y + 1)), this.anchor,this.celltype)
-      case Left() => CenteredAnchor(body.map(point => Point(point.x - 1, point.y)), this.anchor, this.celltype)
-      case Right() => CenteredAnchor(body.map(point => Point(point.x + 1, point.y)), this.anchor, this.celltype)
-    }
-  }*/
-
 }
 
 case object CenteredAnchor
@@ -89,15 +79,6 @@ case class OBlock(override val body : List[Point] = List.empty,
   override def getMovedBody(anchor : Point): OBlock = {
     OBlock(relativeBody.map(point => Point(point.x + anchor.x, point.y + anchor.y)), anchor)
   }
-
-  /*override def move(direction: MoveDirection): OBlock = {
-    direction match {
-      case Down() => OBlock(body.map(point => Point(point.x, point.y + 1)), this.anchor, this.celltype)
-      case Left() => OBlock(body.map(point => Point(point.x - 1, point.y)), this.anchor, this.celltype)
-      case Right() => OBlock(body.map(point => Point(point.x + 1, point.y)), this.anchor, this.celltype)
-    }
-  }*/
-
 }
 
 case class IBlock(override val body : List[Point] = List.empty,
@@ -120,13 +101,4 @@ case class IBlock(override val body : List[Point] = List.empty,
   override def getMovedBody(anchor : Point): IBlock = {
     IBlock(relativeBody.map(point => Point(point.x + anchor.x, point.y + anchor.y)), anchor, relativeBody)
   }
-
-  /*override def move(direction: MoveDirection): IBlock = {
-    direction match {
-      case Down() => IBlock(body.map(point => Point(point.x, point.y + 1)), this.anchor)
-      case Left() => IBlock(body.map(point => Point(point.x - 1, point.y)), this.anchor)
-      case Right() => IBlock(body.map(point => Point(point.x + 1, point.y)), this.anchor)
-    }
-  }*/
-
 }
