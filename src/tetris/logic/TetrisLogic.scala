@@ -3,6 +3,8 @@ package tetris.logic
 import engine.random.{RandomGenerator, ScalaRandomGen}
 import tetris.logic.TetrisLogic._
 
+import java.security.KeyStore.TrustedCertificateEntry
+
 /** To implement Tetris, complete the ``TODOs`` below.
  *
  * If you need additional files,
@@ -51,9 +53,14 @@ class TetrisLogic(val randomGen: RandomGenerator,
     tetromino.setLock(true)
   }
 
-  private def addTetrominoToGameMap(tetromino : Tetromino) : Gamestate =
+  /*private def addTetrominoToGameMap(tetromino : Tetromino) : Gamestate =
     {
       
+    }*/
+
+  private def isCellEmpty(point : Point) : Boolean =
+    {
+      if (currGamestate.gameMap(point.x)(point.y) == Empty) true else false
     }
   private def isCollided(body : List[Point], direction: MoveDirection): Boolean = {
     val oldTetrominosBody = currGamestate.oldTetrominos//.flatMap(_.body)
@@ -63,7 +70,7 @@ class TetrisLogic(val randomGen: RandomGenerator,
       case Right() => body.map(point => Point(point.x+1, point.y))
       case Down() => body.map(point => Point(point.x, point.y+1))
     }
-    movedBody.intersect(oldTetrominosBody).nonEmpty
+    if (movedBody.exists(point => !isCellEmpty(point))) true else false
   }
 
   private def isOutOfBounds(body : List[Point], direction : MoveDirection): Boolean = {
@@ -96,8 +103,8 @@ class TetrisLogic(val randomGen: RandomGenerator,
       val leftRotatedTetromino = tetromino.rotateLeft()
       val rightRotatedTetromino = tetromino.rotateRight()
       direction match {
-        case LeftRotate() => leftRotatedTetromino.body.intersect(oldTetrominosBody).nonEmpty
-        case RightRotate() => rightRotatedTetromino.body.intersect(oldTetrominosBody).nonEmpty
+        case LeftRotate() => if (leftRotatedTetromino.body.exists(point => !isCellEmpty(point))) true else false
+        case RightRotate() => if (rightRotatedTetromino.body.exists(point => !isCellEmpty(point))) true else false
 
       }
     }
@@ -155,6 +162,8 @@ class TetrisLogic(val randomGen: RandomGenerator,
     {
       val appendedOldTetrominos = tetromino.body.map(point => Point(point.x, point.y)) ++ currGamestate.oldTetrominos
       println("NEW TETROMINOS: " + appendedOldTetrominos)
+      val currGameMap = currGamestate.gameMap
+      val updatedGameMap = currGameMap.map(cell => )
       currGamestate.copy(oldTetrominos = appendedOldTetrominos)
     }
 
